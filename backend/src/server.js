@@ -80,16 +80,33 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-// Middleware Ä‘á»ƒ parse JSON tá»« request body
+// Middleware de parse JSON tu request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.get("/health", (req, res) => {
+
+const buildHealthPayload = () => ({
+  success: true,
+  status: "ok",
+  uptime: process.uptime(),
+  apiBaseUrl: publicApiUrl,
+});
+
+app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    status: "ok",
-    uptime: process.uptime(),
+    message: "Backend dang chay",
+    endpoints: {
+      health: "/health",
+      apiHealth: "/api/health",
+      swagger: "/swagger",
+    },
   });
 });
+
+app.get(["/health", "/api/health"], (req, res) => {
+  res.status(200).json(buildHealthPayload());
+});
+
 // Request logging (debug)
 app.use((req, res, next) => {
   const start = Date.now();
@@ -135,12 +152,12 @@ app.use("/api/manager", managerRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Middleware xá»­ lÃ½ lá»—i (pháº£i Ä‘áº·t sau táº¥t cáº£ routes)
+// Middleware xu ly loi, dat sau tat ca routes
 app.use((err, req, res, next) => {
-  console.error("âŒ Unhandled error:", err);
+  console.error("Unhandled error:", err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Lá»—i server khÃ´ng xÃ¡c Ä‘á»‹nh",
+    message: err.message || "Loi server khong xac dinh",
     error: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
@@ -149,7 +166,7 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: "Route khÃ´ng tá»“n táº¡i",
+    message: "Route khong ton tai",
   });
 });
 
@@ -159,16 +176,18 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
-}); // Káº¿t ná»‘i vá»›i MongoDB trÆ°á»›c khi khá»Ÿi Ä‘á»™ng server
+});
+
+// Ket noi voi MongoDB truoc khi khoi dong server
 connectDB()
   .then(() => {
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`ðŸš€ Server báº¯t Ä‘áº§u trÃªn cá»•ng ${PORT}`);
+      console.log(`Server bat dau tren cong ${PORT}`);
       console.log(`API base URL: ${publicApiUrl}`);
       console.log(`Swagger UI: ${publicApiUrl.replace(/\/api$/, "")}/swagger`);
     });
   })
   .catch((error) => {
-    console.error("âŒ KhÃ´ng thá»ƒ khá»Ÿi Ä‘á»™ng server:", error);
+    console.error("Khong the khoi dong server:", error);
     process.exit(1);
   });
